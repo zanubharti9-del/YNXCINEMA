@@ -1,0 +1,91 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: movies
+    // Fields:
+    //   - title: string (required)
+    //   - category: string (required)
+    //   - language: string (required)
+    //   - videoUrl: string (required)
+    //   - description: string
+    //   - thumbnailBase64: string
+    //   - subtitleUrl: string
+    //   - trending: boolean
+    //
+    // Collection: categories
+    // Fields:
+    //   - name: string (required)
+    //
+    // Collection: notifications
+    // Fields:
+    //   - title: string
+    //   - message: string
+    //   - timestamp: timestamp
+    //
+    // Collection: rooms
+    // Fields:
+    //   - roomId: string
+    //   - movieId: string
+    //   - isPlaying: boolean
+    //   - videoTime: number
+    //   - host: string
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isValidMovie(data) {
+      return data.title is string && data.title.size() > 0 &&
+             data.category is string && data.category.size() > 0 &&
+             data.language is string && data.language.size() > 0 &&
+             data.videoUrl is string && data.videoUrl.size() > 0;
+    }
+
+    function isValidCategory(data) {
+      return data.name is string && data.name.size() > 0;
+    }
+
+    function isValidRoom(data) {
+      return data.roomId is string && data.movieId is string &&
+             data.isPlaying is bool && data.videoTime is number;
+    }
+
+    // Rules
+    // Note: The user requested "No login required (guest system)" and "Simple Admin Login (no strict auth)".
+    // Therefore, we are allowing public read and write access for this prototype.
+    // WARNING: These rules are NOT secure for production and should be hardened with Firebase Auth.
+
+    match /movies/{movieId} {
+      allow read: if true;
+      allow write: if true; // Admin panel uses simple password check in UI
+    }
+
+    match /reels/{reelId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /notifications/{notifId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /rooms/{roomDocId} {
+      allow read: if true;
+      allow write: if true;
+      
+      match /messages/{msgId} {
+        allow read: if true;
+        allow write: if true;
+      }
+    }
+  }
+}

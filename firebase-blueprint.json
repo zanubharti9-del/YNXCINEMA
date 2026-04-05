@@ -1,0 +1,101 @@
+{
+  "entities": {
+    "Movie": {
+      "title": "Movie",
+      "description": "A movie or video content in the OTT platform",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Title of the movie" },
+        "description": { "type": "string", "description": "Short summary of the movie" },
+        "category": { "type": "string", "description": "Genre or category" },
+        "language": { "type": "string", "description": "Audio language" },
+        "videoUrl": { "type": "string", "format": "uri", "description": "Stream link" },
+        "thumbnailBase64": { "type": "string", "description": "Base64 encoded image string" },
+        "subtitleUrl": { "type": "string", "format": "uri", "description": "Optional subtitle link" },
+        "trending": { "type": "boolean", "description": "Whether the movie is trending" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "category", "language", "videoUrl"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Movie genres or categories",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Global announcements",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Room": {
+      "title": "Watch Party Room",
+      "description": "Real-time sync room for watch parties",
+      "type": "object",
+      "properties": {
+        "roomId": { "type": "string" },
+        "movieId": { "type": "string" },
+        "isPlaying": { "type": "boolean" },
+        "videoTime": { "type": "number" },
+        "host": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Message": {
+      "title": "Chat Message",
+      "description": "Live chat message in a watch party",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Reel": {
+      "title": "Short Reel",
+      "description": "Short vertical video content",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "videoUrl": { "type": "string", "format": "uri" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "videoUrl"]
+    }
+  },
+  "firestore": {
+    "/movies/{movieId}": {
+      "schema": "Movie",
+      "description": "Collection of movies"
+    },
+    "/reels/{reelId}": {
+      "schema": "Reel",
+      "description": "Collection of short reels"
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Collection of movie categories"
+    },
+    "/notifications/{notifId}": {
+      "schema": "Notification",
+      "description": "Global announcements"
+    },
+    "/rooms/{roomDocId}": {
+      "schema": "Room",
+      "description": "Watch party rooms"
+    },
+    "/rooms/{roomDocId}/messages/{msgId}": {
+      "schema": "Message",
+      "description": "Chat messages within a room"
+    }
+  }
+}

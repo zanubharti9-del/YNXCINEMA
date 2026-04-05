@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineVerse Live - Premium OTT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #E50914;
+            --bg-dark: #000000;
+            --bg-card: rgba(255, 255, 255, 0.05);
+            --glass: rgba(255, 255, 255, 0.1);
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-dark);
+            color: white;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+        h1, h2, h3, .font-montserrat {
+            font-family: 'Montserrat', sans-serif;
+        }
+        .glass {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .movie-card:hover .overlay {
+            opacity: 1;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .active-tab {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+        .video-container video {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: black;
+        }
+        .reel-container {
+            height: calc(100vh - 120px);
+            scroll-snap-type: y mandatory;
+            overflow-y: scroll;
+        }
+        .reel-item {
+            height: 100%;
+            scroll-snap-align: start;
+            position: relative;
+        }
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="pb-20">
+    <!-- Loading Overlay -->
+    <div id="loading-screen" class="fixed inset-0 z-[100] bg-black flex items-center justify-center transition-opacity duration-500">
+        <div class="flex flex-col items-center gap-4">
+            <div class="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center animate-pulse">
+                <i data-lucide="play" class="w-10 h-10 text-white fill-current"></i>
+            </div>
+            <div class="loader"></div>
+            <p class="text-red-600 font-bold tracking-widest text-xs uppercase">CineVerse Live</p>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 glass px-4 py-3 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+            <button onclick="handleBack()" class="p-2 text-gray-400 hover:text-white transition-colors" title="Go Back">
+                <i data-lucide="chevron-left" class="w-6 h-6"></i>
+            </button>
+            <div class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
+                <i data-lucide="play" class="w-5 h-5 text-white fill-current"></i>
+            </div>
+            <span class="text-xl font-bold font-montserrat tracking-tighter text-red-600">CINEVERSE</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <div id="sync-status" class="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 text-green-500 text-[10px] font-bold uppercase tracking-wider border border-green-500/20">
+                <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                Live
+            </div>
+            <button onclick="window.location.href='/admin.html'" class="p-2 text-gray-400 hover:text-red-600 transition-colors" title="Admin Panel">
+                <i data-lucide="shield-check" class="w-6 h-6"></i>
+            </button>
+            <button onclick="window.location.reload()" class="p-2 text-gray-400 hover:text-white transition-colors" title="Refresh">
+                <i data-lucide="rotate-cw" class="w-6 h-6"></i>
+            </button>
+            <button onclick="showView('search')" class="p-2"><i data-lucide="search" class="w-6 h-6"></i></button>
+            <button onclick="showView('notifications')" class="p-2 relative">
+                <i data-lucide="bell" class="w-6 h-6"></i>
+                <span id="notif-dot" class="hidden absolute top-2 right-2 w-2 h-2 bg-red-600 rounded-full"></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main id="main-view" class="pt-16 px-4">
+        <!-- Home View -->
+        <div id="view-home" class="view animate-fade">
+            <!-- Hero Section -->
+            <div id="hero-section" class="relative w-full h-64 rounded-2xl overflow-hidden mb-8 mt-4">
+                <img id="hero-img" src="https://picsum.photos/seed/movie/800/450" class="w-full h-full object-cover opacity-60" referrerPolicy="no-referrer">
+                <div class="absolute bottom-0 left-0 p-6 w-full bg-gradient-to-t from-black to-transparent">
+                    <h2 id="hero-title" class="text-3xl font-bold mb-2">Loading...</h2>
+                    <div class="flex gap-3">
+                        <button id="hero-play-btn" class="bg-red-600 text-white px-6 py-2 rounded-full font-bold flex items-center gap-2">
+                            <i data-lucide="play" class="w-4 h-4 fill-current"></i> Play
+                        </button>
+                        <button id="hero-info-btn" class="glass px-6 py-2 rounded-full font-bold">Details</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trending -->
+            <section class="mb-8">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i data-lucide="trending-up" class="w-5 h-5 text-red-600"></i> Trending Now
+                </h3>
+                <div id="trending-list" class="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+                    <!-- Movie Cards -->
+                </div>
+            </section>
+
+            <!-- Categories -->
+            <section class="mb-8">
+                <h3 class="text-xl font-bold mb-4">Categories</h3>
+                <div id="category-list" class="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+                    <button onclick="filterByCategory('All')" class="px-4 py-2 rounded-full glass whitespace-nowrap bg-red-600">All</button>
+                    <!-- Categories will be injected -->
+                </div>
+            </section>
+
+            <!-- All Movies -->
+            <section class="mb-8">
+                <h3 class="text-xl font-bold mb-4">Recommended for You</h3>
+                <div id="movie-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <!-- Movie Cards -->
+                </div>
+            </section>
+        </div>
+
+        <!-- Search View -->
+        <div id="view-search" class="view hidden animate-fade">
+            <div class="mt-4 mb-6">
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5"></i>
+                    <input type="text" id="search-input" placeholder="Search movies, actors, genres..." class="w-full bg-white/10 border border-white/20 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:border-red-600">
+                </div>
+            </div>
+            <div id="search-results" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <!-- Results -->
+            </div>
+        </div>
+
+        <!-- Watch Party View -->
+        <div id="view-party" class="view hidden animate-fade">
+            <div class="flex flex-col gap-6 mt-4">
+                <div class="glass p-6 rounded-3xl text-center">
+                    <i data-lucide="users" class="w-12 h-12 text-red-600 mx-auto mb-4"></i>
+                    <h2 class="text-2xl font-bold mb-2">Watch Party</h2>
+                    <p class="text-gray-400 mb-6">Watch movies together with friends in real-time sync!</p>
+                    <button onclick="createRoom()" class="w-full bg-red-600 py-4 rounded-2xl font-bold mb-4">Create New Room</button>
+                    <div class="flex gap-2">
+                        <input type="text" id="room-id-input" placeholder="Enter Room ID" class="flex-1 bg-white/10 border border-white/20 rounded-2xl px-4 py-3 focus:outline-none">
+                        <button onclick="joinRoom()" class="glass px-6 py-3 rounded-2xl font-bold">Join</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reels View -->
+        <div id="view-reels" class="view hidden animate-fade -mx-4">
+            <div id="reels-container" class="reel-container">
+                <!-- Reels will be injected -->
+            </div>
+        </div>
+
+        <!-- Profile/Watchlist View -->
+        <div id="view-profile" class="view hidden animate-fade">
+            <div class="mt-4">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-20 h-20 rounded-full bg-gradient-to-br from-red-600 to-red-900 flex items-center justify-center text-3xl font-bold">G</div>
+                    <div>
+                        <h2 class="text-2xl font-bold">Guest User</h2>
+                        <p class="text-gray-400">Premium Member</p>
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <i data-lucide="heart" class="w-5 h-5 text-red-600"></i> My Watchlist
+                    </h3>
+                    <div id="watchlist-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <!-- Watchlist items -->
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <i data-lucide="history" class="w-5 h-5 text-red-600"></i> Watch History
+                    </h3>
+                    <div id="history-list" class="flex flex-col gap-3">
+                        <!-- History items -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Player View -->
+        <div id="view-player" class="view hidden fixed inset-0 z-[60] bg-black">
+            <div class="relative h-full flex flex-col">
+                <button onclick="closePlayer()" class="absolute top-6 left-6 z-10 p-2 glass rounded-full">
+                    <i data-lucide="arrow-left" class="w-6 h-6"></i>
+                </button>
+                
+                <div class="video-container flex-1 flex items-center justify-center">
+                    <video id="main-video" controls playsinline crossorigin="anonymous">
+                        <source id="video-source" src="" type="video/mp4">
+                        <track id="video-subtitle" kind="subtitles" label="English" srclang="en" src="" default>
+                    </video>
+                </div>
+
+                <!-- Watch Party Overlay -->
+                <div id="party-overlay" class="hidden absolute right-0 top-0 bottom-0 w-80 glass border-l border-white/10 flex flex-col">
+                    <div class="p-4 border-b border-white/10 flex justify-between items-center">
+                        <h3 class="font-bold">Live Chat</h3>
+                        <button onclick="togglePartyChat()" class="p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+                    </div>
+                    <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
+                        <!-- Messages -->
+                    </div>
+                    <div class="p-4 border-t border-white/10">
+                        <div class="flex gap-2 mb-2">
+                            <button onclick="sendEmoji('❤️')" class="text-xl">❤️</button>
+                            <button onclick="sendEmoji('🔥')" class="text-xl">🔥</button>
+                            <button onclick="sendEmoji('😂')" class="text-xl">😂</button>
+                            <button onclick="sendEmoji('😮')" class="text-xl">😮</button>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="text" id="chat-input" placeholder="Type a message..." class="flex-1 bg-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none">
+                            <button onclick="sendMessage()" class="bg-red-600 p-2 rounded-xl"><i data-lucide="send" class="w-4 h-4"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="player-info" class="p-6 bg-gradient-to-t from-black to-transparent">
+                    <h2 id="player-title" class="text-2xl font-bold mb-2">Movie Title</h2>
+                    <p id="player-desc" class="text-gray-400 text-sm line-clamp-2 mb-4">Description goes here...</p>
+                    <div class="flex items-center gap-4">
+                        <button id="party-btn" onclick="togglePartyChat()" class="hidden glass px-4 py-2 rounded-xl flex items-center gap-2 text-sm">
+                            <i data-lucide="users" class="w-4 h-4"></i> Chat
+                        </button>
+                        <button onclick="shareMovie()" class="glass px-4 py-2 rounded-xl flex items-center gap-2 text-sm">
+                            <i data-lucide="share-2" class="w-4 h-4"></i> Share
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications View -->
+        <div id="view-notifications" class="view hidden animate-fade">
+            <h2 class="text-2xl font-bold mt-4 mb-6">Notifications</h2>
+            <div id="notif-list" class="space-y-4">
+                <!-- Notifications -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <div class="fixed bottom-0 left-0 right-0 z-50 glass px-6 py-4 flex justify-between items-center border-t border-white/10">
+        <button onclick="showView('home')" class="nav-btn flex flex-col items-center gap-1 active-tab" id="nav-home">
+            <i data-lucide="home" class="w-6 h-6"></i>
+            <span class="text-[10px] uppercase font-bold">Home</span>
+        </button>
+        <button onclick="showView('reels')" class="nav-btn flex flex-col items-center gap-1 text-gray-400" id="nav-reels">
+            <i data-lucide="clapperboard" class="w-6 h-6"></i>
+            <span class="text-[10px] uppercase font-bold">Reels</span>
+        </button>
+        <button onclick="showView('party')" class="nav-btn flex flex-col items-center gap-1 text-gray-400" id="nav-party">
+            <i data-lucide="users" class="w-6 h-6"></i>
+            <span class="text-[10px] uppercase font-bold">Party</span>
+        </button>
+        <button onclick="showView('profile')" class="nav-btn flex flex-col items-center gap-1 text-gray-400" id="nav-profile">
+            <i data-lucide="user" class="w-6 h-6"></i>
+            <span class="text-[10px] uppercase font-bold">Profile</span>
+        </button>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] glass px-6 py-3 rounded-full text-sm font-bold opacity-0 transition-opacity pointer-events-none">
+        Message here
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getFirestore, collection, onSnapshot, query, where, addDoc, doc, updateDoc, deleteDoc, getDocs, orderBy, limit, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+        // Firebase Initialization
+        let db;
+        let movies = [];
+        let reels = [];
+        let categories = [];
+        let watchlist = JSON.parse(localStorage.getItem('cineverse_watchlist') || '[]');
+        let history = JSON.parse(localStorage.getItem('cineverse_history') || '[]');
+        let currentRoomId = null;
+        let isHost = false;
+        let roomUnsubscribe = null;
+
+        async function initFirebase() {
+            try {
+                console.log("Fetching Firebase config...");
+                const response = await fetch('/firebase-applet-config.json');
+                if (!response.ok) throw new Error("Failed to fetch config");
+                const config = await response.json();
+                
+                console.log("Initializing Firebase...");
+                const app = initializeApp(config);
+                db = getFirestore(app, config.firestoreDatabaseId);
+                
+                console.log("Firebase initialized with database:", config.firestoreDatabaseId);
+                
+                // Start listeners after initialization
+                startListeners();
+            } catch (err) {
+                console.error("Firebase initialization failed:", err);
+                showToast("Database connection failed!");
+                // Hide loader so user can see the error or home screen
+                const loader = document.getElementById('loading-screen');
+                if (loader) {
+                    loader.classList.add('opacity-0');
+                    setTimeout(() => loader.classList.add('hidden'), 500);
+                }
+            }
+        }
+
+        function startListeners() {
+            console.log("Starting Firestore listeners...");
+            // Data Fetching
+            onSnapshot(collection(db, 'movies'), (snapshot) => {
+                console.log("Movies snapshot received:", snapshot.size);
+                movies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderHome();
+                updateHero();
+                const syncStatus = document.getElementById('sync-status');
+                if (syncStatus) syncStatus.classList.remove('hidden');
+                hideLoader();
+            }, (err) => {
+                console.error("Movies listener failed:", err);
+                hideLoader();
+            });
+
+            onSnapshot(collection(db, 'reels'), (snapshot) => {
+                reels = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (!document.getElementById('view-reels').classList.contains('hidden')) renderReels();
+            }, (err) => console.error("Reels listener failed:", err));
+
+            onSnapshot(collection(db, 'categories'), (snapshot) => {
+                categories = snapshot.docs.map(doc => doc.data().name);
+                renderCategories();
+            }, (err) => console.error("Categories listener failed:", err));
+
+            onSnapshot(query(collection(db, 'notifications'), orderBy('timestamp', 'desc'), limit(10)), (snapshot) => {
+                const notifs = snapshot.docs.map(doc => doc.data());
+                renderNotifications(notifs);
+                if (notifs.length > 0) {
+                    const dot = document.getElementById('notif-dot');
+                    if (dot) dot.classList.remove('hidden');
+                }
+            }, (err) => console.error("Notifications listener failed:", err));
+        }
+
+        function hideLoader() {
+            const loader = document.getElementById('loading-screen');
+            if (loader && !loader.classList.contains('hidden')) {
+                loader.classList.add('opacity-0');
+                setTimeout(() => loader.classList.add('hidden'), 500);
+            }
+        }
+
+        // Fallback to hide loader after 5 seconds
+        setTimeout(hideLoader, 5000);
+
+        // View Management
+        let currentView = 'home';
+        function showView(viewId) {
+            currentView = viewId;
+            document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+            document.getElementById(`view-${viewId}`).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active-tab', 'text-gray-400'));
+            const navBtn = document.getElementById(`nav-${viewId}`);
+            if (navBtn) {
+                navBtn.classList.add('active-tab');
+            } else {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.add('text-gray-400'));
+            }
+
+            if (viewId === 'reels') renderReels();
+            if (viewId === 'profile') renderProfile();
+            
+            window.scrollTo(0, 0);
+        }
+        window.showView = showView;
+
+        function handleBack() {
+            if (document.getElementById('view-player').classList.contains('hidden') === false) {
+                closePlayer();
+            } else if (currentView !== 'home') {
+                showView('home');
+            } else {
+                window.history.back();
+            }
+        }
+        window.handleBack = handleBack;
+
+        // Rendering Functions
+        function renderHome() {
+            const trendingList = document.getElementById('trending-list');
+            const movieGrid = document.getElementById('movie-grid');
+            
+            if (!trendingList || !movieGrid) return;
+
+            const trendingMovies = movies.filter(m => m.trending);
+            
+            if (movies.length === 0) {
+                movieGrid.innerHTML = `
+                    <div class="col-span-full py-20 text-center glass rounded-3xl">
+                        <i data-lucide="film" class="w-12 h-12 text-gray-600 mx-auto mb-4"></i>
+                        <p class="text-gray-400">No movies found. Add some from the Admin Panel!</p>
+                    </div>
+                `;
+                trendingList.innerHTML = '<p class="text-gray-600 text-sm italic">No trending movies</p>';
+            } else {
+                trendingList.innerHTML = trendingMovies.length > 0 
+                    ? trendingMovies.map(m => createMovieCard(m, true)).join('')
+                    : '<p class="text-gray-600 text-sm italic">No trending movies</p>';
+                movieGrid.innerHTML = movies.map(m => createMovieCard(m)).join('');
+            }
+            
+            lucide.createIcons();
+        }
+
+        function renderCategories() {
+            const catList = document.getElementById('category-list');
+            catList.innerHTML = `
+                <button onclick="filterByCategory('All')" class="px-4 py-2 rounded-full glass whitespace-nowrap bg-red-600">All</button>
+                ${categories.map(c => `
+                    <button onclick="filterByCategory('${c}')" class="px-4 py-2 rounded-full glass whitespace-nowrap">${c}</button>
+                `).join('')}
+            `;
+        }
+
+        function createMovieCard(movie, isLarge = false) {
+            const inWatchlist = watchlist.includes(movie.id);
+            return `
+                <div class="movie-card relative flex-shrink-0 ${isLarge ? 'w-40' : 'w-full'} group cursor-pointer" onclick="playMovie('${movie.id}')">
+                    <div class="aspect-[2/3] rounded-2xl overflow-hidden glass">
+                        <img src="${movie.thumbnailBase64 || 'https://picsum.photos/seed/'+movie.id+'/200/300'}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" referrerPolicy="no-referrer">
+                    </div>
+                    <div class="overlay absolute inset-0 bg-black/60 opacity-0 transition-opacity flex flex-col justify-end p-3 rounded-2xl">
+                        <h4 class="font-bold text-sm line-clamp-1">${movie.title}</h4>
+                        <div class="flex justify-between items-center mt-1">
+                            <span class="text-[10px] bg-red-600 px-2 py-0.5 rounded uppercase font-bold">${movie.language}</span>
+                            <button onclick="event.stopPropagation(); toggleWatchlist('${movie.id}')" class="p-1">
+                                <i data-lucide="heart" class="w-4 h-4 ${inWatchlist ? 'fill-red-600 text-red-600' : ''}"></i>
+                            </button>
+                        </div>
+                    </div>
+                    ${movie.trending ? '<span class="absolute top-2 left-2 bg-red-600 text-[8px] font-bold px-2 py-1 rounded-lg uppercase tracking-widest">Trending</span>' : ''}
+                </div>
+            `;
+        }
+
+        function updateHero() {
+            if (movies.length === 0) return;
+            const hero = movies.find(m => m.trending) || movies[0];
+            document.getElementById('hero-title').innerText = hero.title;
+            document.getElementById('hero-img').src = hero.thumbnailBase64 || 'https://picsum.photos/seed/hero/800/450';
+            document.getElementById('hero-play-btn').onclick = () => playMovie(hero.id);
+            document.getElementById('hero-info-btn').onclick = () => showToast(hero.description);
+        }
+
+        window.filterByCategory = (cat) => {
+            const grid = document.getElementById('movie-grid');
+            const filtered = cat === 'All' ? movies : movies.filter(m => m.category === cat);
+            grid.innerHTML = filtered.map(m => createMovieCard(m)).join('');
+            
+            document.querySelectorAll('#category-list button').forEach(btn => {
+                btn.classList.remove('bg-red-600');
+                if (btn.innerText === cat) btn.classList.add('bg-red-600');
+            });
+            lucide.createIcons();
+        };
+
+        // Search Logic
+        document.getElementById('search-input').oninput = (e) => {
+            const term = e.target.value.toLowerCase();
+            const results = movies.filter(m => 
+                m.title.toLowerCase().includes(term) || 
+                m.category.toLowerCase().includes(term) ||
+                m.language.toLowerCase().includes(term)
+            );
+            document.getElementById('search-results').innerHTML = results.map(m => createMovieCard(m)).join('');
+            lucide.createIcons();
+        };
+
+        // Player Logic
+        function playMovie(movieId, roomId = null) {
+            const movie = movies.find(m => m.id === movieId);
+            if (!movie) return;
+
+            const video = document.getElementById('main-video');
+            const source = document.getElementById('video-source');
+            const subtitle = document.getElementById('video-subtitle');
+            
+            source.src = movie.videoUrl;
+            if (movie.subtitleUrl) subtitle.src = movie.subtitleUrl;
+            
+            document.getElementById('player-title').innerText = movie.title;
+            document.getElementById('player-desc').innerText = movie.description;
+            
+            video.load();
+            document.getElementById('view-player').classList.remove('hidden');
+            
+            // Save to history
+            if (!history.find(h => h.id === movieId)) {
+                history.unshift({ id: movieId, title: movie.title, time: new Date().toISOString() });
+                localStorage.setItem('cineverse_history', JSON.stringify(history.slice(0, 20)));
+            }
+
+            // Watch Party Logic
+            if (roomId) {
+                currentRoomId = roomId;
+                document.getElementById('party-btn').classList.remove('hidden');
+                setupRoomSync();
+            } else {
+                currentRoomId = null;
+                document.getElementById('party-btn').classList.add('hidden');
+                document.getElementById('party-overlay').classList.add('hidden');
+                video.play();
+            }
+        }
+        window.playMovie = playMovie;
+
+        function closePlayer() {
+            const video = document.getElementById('main-video');
+            video.pause();
+            document.getElementById('view-player').classList.add('hidden');
+            if (roomUnsubscribe) roomUnsubscribe();
+            currentRoomId = null;
+        }
+        window.closePlayer = closePlayer;
+
+        // Watch Party Logic
+        window.createRoom = async () => {
+            const movieId = movies[0]?.id; // Default to first movie for demo
+            if (!movieId) return showToast("No movies available to watch");
+            
+            const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+            await addDoc(collection(db, 'rooms'), {
+                roomId,
+                movieId,
+                isPlaying: false,
+                videoTime: 0,
+                host: 'Guest',
+                createdAt: serverTimestamp()
+            });
+            
+            isHost = true;
+            playMovie(movieId, roomId);
+            showToast(`Room Created: ${roomId}`);
+        };
+
+        window.joinRoom = async () => {
+            const roomId = document.getElementById('room-id-input').value.toUpperCase();
+            if (!roomId) return showToast("Enter Room ID");
+
+            const q = query(collection(db, 'rooms'), where('roomId', '==', roomId));
+            const snapshot = await getDocs(q);
+            
+            if (snapshot.empty) return showToast("Room not found");
+            
+            const roomData = snapshot.docs[0].data();
+            isHost = false;
+            playMovie(roomData.movieId, roomId);
+        };
+
+        function setupRoomSync() {
+            const video = document.getElementById('main-video');
+            
+            roomUnsubscribe = onSnapshot(query(collection(db, 'rooms'), where('roomId', '==', currentRoomId)), (snapshot) => {
+                if (snapshot.empty) return;
+                const data = snapshot.docs[0].data();
+                const docId = snapshot.docs[0].id;
+
+                if (!isHost) {
+                    if (Math.abs(video.currentTime - data.videoTime) > 2) {
+                        video.currentTime = data.videoTime;
+                    }
+                    if (data.isPlaying && video.paused) video.play();
+                    if (!data.isPlaying && !video.paused) video.pause();
+                }
+
+                // Sync host controls back to DB
+                if (isHost) {
+                    video.onplay = () => updateDoc(doc(db, 'rooms', docId), { isPlaying: true });
+                    video.onpause = () => updateDoc(doc(db, 'rooms', docId), { isPlaying: false });
+                    video.ontimeupdate = () => {
+                        if (video.currentTime % 5 < 0.3) { // Sync every 5 seconds
+                            updateDoc(doc(db, 'rooms', docId), { videoTime: video.currentTime });
+                        }
+                    };
+                }
+            });
+
+            // Chat sync
+            onSnapshot(query(collection(db, `rooms/${currentRoomId}/messages`), orderBy('timestamp', 'asc')), (snapshot) => {
+                const messages = snapshot.docs.map(doc => doc.data());
+                const chatBox = document.getElementById('chat-messages');
+                chatBox.innerHTML = messages.map(m => `
+                    <div class="animate-fade">
+                        <span class="text-xs font-bold text-red-600">Guest:</span>
+                        <p class="text-sm bg-white/5 p-2 rounded-lg mt-1">${m.text}</p>
+                    </div>
+                `).join('');
+                chatBox.scrollTop = chatBox.scrollHeight;
+            });
+        }
+
+        window.sendMessage = async () => {
+            const input = document.getElementById('chat-input');
+            if (!input.value || !currentRoomId) return;
+            
+            await addDoc(collection(db, `rooms/${currentRoomId}/messages`), {
+                text: input.value,
+                timestamp: serverTimestamp()
+            });
+            input.value = '';
+        };
+
+        window.sendEmoji = async (emoji) => {
+            if (!currentRoomId) return;
+            await addDoc(collection(db, `rooms/${currentRoomId}/messages`), {
+                text: emoji,
+                timestamp: serverTimestamp()
+            });
+        };
+
+        window.togglePartyChat = () => {
+            document.getElementById('party-overlay').classList.toggle('hidden');
+        };
+
+        // Watchlist & History
+        window.toggleWatchlist = (id) => {
+            if (watchlist.includes(id)) {
+                watchlist = watchlist.filter(item => item !== id);
+                showToast("Removed from Watchlist");
+            } else {
+                watchlist.push(id);
+                showToast("Added to Watchlist");
+            }
+            localStorage.setItem('cineverse_watchlist', JSON.stringify(watchlist));
+            renderHome();
+            if (document.getElementById('view-profile').classList.contains('hidden') === false) renderProfile();
+        };
+
+        function renderProfile() {
+            const watchlistGrid = document.getElementById('watchlist-grid');
+            const historyList = document.getElementById('history-list');
+            
+            const watchlistMovies = movies.filter(m => watchlist.includes(m.id));
+            watchlistGrid.innerHTML = watchlistMovies.map(m => createMovieCard(m)).join('');
+            
+            historyList.innerHTML = history.map(h => `
+                <div class="glass p-4 rounded-2xl flex justify-between items-center">
+                    <div>
+                        <h4 class="font-bold">${h.title}</h4>
+                        <p class="text-[10px] text-gray-400">${new Date(h.time).toLocaleDateString()}</p>
+                    </div>
+                    <button onclick="playMovie('${h.id}')" class="text-red-600"><i data-lucide="play" class="w-5 h-5"></i></button>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        // Reels
+        function renderReels() {
+            const container = document.getElementById('reels-container');
+            if (reels.length === 0) {
+                container.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-gray-500">
+                        <i data-lucide="clapperboard" class="w-12 h-12 mb-4"></i>
+                        <p>No reels available yet</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+            container.innerHTML = reels.map(m => `
+                <div class="reel-item">
+                    <video src="${m.videoUrl}" class="w-full h-full object-cover" loop muted autoplay playsinline></video>
+                    <div class="absolute bottom-20 left-6 right-20">
+                        <h3 class="text-xl font-bold mb-1">${m.title}</h3>
+                        <p class="text-sm text-gray-300 line-clamp-1">${m.description || ''}</p>
+                    </div>
+                    <div class="absolute bottom-20 right-4 flex flex-col gap-6 items-center">
+                        <button class="flex flex-col items-center gap-1"><i data-lucide="heart" class="w-8 h-8"></i><span class="text-xs">Like</span></button>
+                        <button class="flex flex-col items-center gap-1"><i data-lucide="message-circle" class="w-8 h-8"></i><span class="text-xs">Chat</span></button>
+                        <button onclick="shareMovie()" class="flex flex-col items-center gap-1"><i data-lucide="share-2" class="w-8 h-8"></i><span class="text-xs">Share</span></button>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        // Notifications
+        function renderNotifications(notifs) {
+            const list = document.getElementById('notif-list');
+            list.innerHTML = notifs.map(n => `
+                <div class="glass p-4 rounded-2xl border-l-4 border-red-600">
+                    <h4 class="font-bold text-sm">${n.title}</h4>
+                    <p class="text-xs text-gray-400 mt-1">${n.message}</p>
+                </div>
+            `).join('');
+        }
+
+        // Utilities
+        window.showToast = (msg) => {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.style.opacity = '1';
+            setTimeout(() => toast.style.opacity = '0', 3000);
+        };
+
+        function shareMovie() {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'CineVerse Live',
+                    text: 'Check out this movie on CineVerse Live!',
+                    url: window.location.href
+                });
+            } else {
+                showToast("Link copied to clipboard!");
+            }
+        }
+        window.shareMovie = shareMovie;
+
+        // Initial View
+        showView('home');
+
+        // Start initialization
+        initFirebase();
+
+        // Initialize Lucide
+        lucide.createIcons();
+    </script>
+</body>
+</html>

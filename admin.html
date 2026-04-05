@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineVerse Admin - Control Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #E50914;
+            --bg-dark: #0a0a0a;
+            --bg-card: #1a1a1a;
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-dark);
+            color: white;
+        }
+        h1, h2, h3, .font-montserrat {
+            font-family: 'Montserrat', sans-serif;
+        }
+        .glass {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .sidebar-active {
+            background: var(--primary);
+            color: white;
+        }
+        input, select, textarea {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            width: 100%;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .loading-spinner {
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-top: 2px solid var(--primary);
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="flex min-h-screen">
+    <!-- Loading Overlay -->
+    <div id="admin-loading" class="fixed inset-0 z-[150] bg-black flex items-center justify-center transition-opacity duration-500">
+        <div class="flex flex-col items-center gap-4">
+            <div class="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center animate-pulse">
+                <i data-lucide="shield-check" class="w-10 h-10 text-white"></i>
+            </div>
+            <div class="loading-spinner"></div>
+            <p class="text-red-600 font-bold tracking-widest text-xs uppercase">CineVerse Admin</p>
+        </div>
+    </div>
+
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="fixed inset-0 z-[100] bg-black flex items-center justify-center p-4">
+        <div class="glass p-8 rounded-3xl w-full max-w-md text-center">
+            <div class="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <i data-lucide="shield-check" class="w-10 h-10"></i>
+            </div>
+            <h1 class="text-3xl font-bold mb-2">Admin Login</h1>
+            <p class="text-gray-400 mb-8">Enter credentials to access CineVerse Admin</p>
+            <input type="password" id="admin-pass" placeholder="Admin Password" class="mb-4 text-center">
+            <button onclick="login()" class="w-full bg-red-600 py-4 rounded-2xl font-bold hover:bg-red-700 transition mb-4">Access Dashboard</button>
+            <button onclick="window.location.href='/index.html'" class="w-full glass py-4 rounded-2xl font-bold hover:bg-white/10 transition">Back to App</button>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-[110] w-64 glass border-r border-white/10 flex flex-col p-6 transition-transform -translate-x-full md:translate-x-0 md:static">
+        <div class="flex items-center justify-between mb-12">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
+                    <i data-lucide="play" class="w-5 h-5 text-white fill-current"></i>
+                </div>
+                <span class="text-xl font-bold font-montserrat tracking-tighter text-red-600">ADMIN</span>
+            </div>
+            <button onclick="toggleSidebar()" class="md:hidden p-2 hover:bg-white/10 rounded-lg text-gray-400">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        
+        <nav class="flex flex-col gap-2">
+            <button onclick="showSection('dashboard'); toggleSidebar(false)" class="nav-btn flex items-center gap-3 p-4 rounded-xl text-gray-400 hover:bg-white/5 transition sidebar-active" id="btn-dashboard">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard
+            </button>
+            <button onclick="showSection('movies'); toggleSidebar(false)" class="nav-btn flex items-center gap-3 p-4 rounded-xl text-gray-400 hover:bg-white/5 transition" id="btn-movies">
+                <i data-lucide="film" class="w-5 h-5"></i> Movies
+            </button>
+            <button onclick="showSection('reels'); toggleSidebar(false)" class="nav-btn flex items-center gap-3 p-4 rounded-xl text-gray-400 hover:bg-white/5 transition" id="btn-reels">
+                <i data-lucide="clapperboard" class="w-5 h-5"></i> Reels
+            </button>
+            <button onclick="showSection('categories'); toggleSidebar(false)" class="nav-btn flex items-center gap-3 p-4 rounded-xl text-gray-400 hover:bg-white/5 transition" id="btn-categories">
+                <i data-lucide="list" class="w-5 h-5"></i> Categories
+            </button>
+            <button onclick="showSection('notifications'); toggleSidebar(false)" class="nav-btn flex items-center gap-3 p-4 rounded-xl text-gray-400 hover:bg-white/5 transition" id="btn-notifications">
+                <i data-lucide="bell" class="w-5 h-5"></i> Notifications
+            </button>
+        </nav>
+
+        <div class="mt-auto">
+            <button onclick="window.location.href='/index.html'" class="flex items-center gap-3 p-4 rounded-xl text-gray-400 hover:bg-white/5 transition w-full mb-2">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i> Back to App
+            </button>
+            <button onclick="logout()" class="flex items-center gap-3 p-4 rounded-xl text-red-500 hover:bg-red-500/10 transition w-full">
+                <i data-lucide="log-out" class="w-5 h-5"></i> Logout
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col min-h-screen overflow-hidden">
+        <!-- Mobile Header -->
+        <header class="md:hidden glass p-4 flex justify-between items-center z-50">
+            <div class="flex items-center gap-2">
+                <div class="w-6 h-6 bg-red-600 rounded flex items-center justify-center">
+                    <i data-lucide="play" class="w-4 h-4 text-white fill-current"></i>
+                </div>
+                <span class="text-lg font-bold font-montserrat tracking-tighter text-red-600">ADMIN</span>
+            </div>
+            <button onclick="toggleSidebar()" class="p-2 glass rounded-lg">
+                <i data-lucide="menu" class="w-6 h-6"></i>
+            </button>
+        </header>
+
+        <div class="flex-1 p-4 md:p-8 overflow-y-auto pb-24 md:pb-8">
+            <!-- Dashboard Section -->
+            <section id="section-dashboard" class="section">
+                <div class="flex justify-between items-center mb-8">
+                    <h2 class="text-2xl md:text-3xl font-bold">Dashboard Overview</h2>
+                    <div id="sync-status" class="hidden flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 text-green-500 text-[10px] font-bold uppercase tracking-wider border border-green-500/20">
+                        <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                        Real-time Sync Active
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-12">
+                    <div class="glass p-6 md:p-8 rounded-3xl">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="p-3 bg-red-600/20 rounded-2xl text-red-600">
+                                <i data-lucide="film" class="w-6 h-6 md:w-8 md:h-8"></i>
+                            </div>
+                            <span class="text-xs text-green-500 font-bold">+12%</span>
+                        </div>
+                        <h3 class="text-3xl md:text-4xl font-bold mb-1" id="stat-movies">0</h3>
+                        <p class="text-gray-400 text-sm">Total Movies</p>
+                    </div>
+                    <div class="glass p-6 md:p-8 rounded-3xl">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="p-3 bg-blue-600/20 rounded-2xl text-blue-600">
+                                <i data-lucide="users" class="w-6 h-6 md:w-8 md:h-8"></i>
+                            </div>
+                            <span class="text-xs text-green-500 font-bold">+5%</span>
+                        </div>
+                        <h3 class="text-3xl md:text-4xl font-bold mb-1" id="stat-users">1,284</h3>
+                        <p class="text-gray-400 text-sm">Total Users</p>
+                    </div>
+                    <div class="glass p-6 md:p-8 rounded-3xl">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="p-3 bg-orange-600/20 rounded-2xl text-orange-600">
+                                <i data-lucide="clapperboard" class="w-6 h-6 md:w-8 md:h-8"></i>
+                            </div>
+                            <span class="text-xs text-green-500 font-bold">+15%</span>
+                        </div>
+                        <h3 class="text-3xl md:text-4xl font-bold mb-1" id="stat-reels">0</h3>
+                        <p class="text-gray-400 text-sm">Total Reels</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl md:text-2xl font-bold">Recent Uploads</h3>
+                    <button onclick="showSection('movies')" class="text-red-600 font-bold hover:underline text-sm">View All</button>
+                </div>
+                <div id="recent-movies" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+                    <!-- Recent movies cards -->
+                </div>
+
+                <h3 class="text-xl md:text-2xl font-bold mb-6">Quick Actions</h3>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <button onclick="openMovieForm()" class="glass p-6 rounded-3xl flex flex-col items-center gap-3 hover:bg-red-600/10 transition group">
+                        <div class="p-3 bg-red-600 rounded-2xl group-hover:scale-110 transition">
+                            <i data-lucide="plus" class="w-6 h-6"></i>
+                        </div>
+                        <span class="font-bold text-sm">Add Movie</span>
+                    </button>
+                    <button onclick="openReelForm()" class="glass p-6 rounded-3xl flex flex-col items-center gap-3 hover:bg-orange-600/10 transition group">
+                        <div class="p-3 bg-orange-600 rounded-2xl group-hover:scale-110 transition">
+                            <i data-lucide="video" class="w-6 h-6"></i>
+                        </div>
+                        <span class="font-bold text-sm">Add Reel</span>
+                    </button>
+                    <button onclick="showSection('categories')" class="glass p-6 rounded-3xl flex flex-col items-center gap-3 hover:bg-blue-600/10 transition group">
+                        <div class="p-3 bg-blue-600 rounded-2xl group-hover:scale-110 transition">
+                            <i data-lucide="list-plus" class="w-6 h-6"></i>
+                        </div>
+                        <span class="font-bold text-sm">New Category</span>
+                    </button>
+                    <button onclick="showSection('notifications')" class="glass p-6 rounded-3xl flex flex-col items-center gap-3 hover:bg-purple-600/10 transition group">
+                        <div class="p-3 bg-purple-600 rounded-2xl group-hover:scale-110 transition">
+                            <i data-lucide="megaphone" class="w-6 h-6"></i>
+                        </div>
+                        <span class="font-bold text-sm">Broadcast</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Movies Section -->
+            <section id="section-movies" class="section hidden">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                    <div class="flex items-center gap-4">
+                        <button onclick="showSection('dashboard')" class="p-2 glass rounded-lg"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+                        <h2 class="text-2xl md:text-3xl font-bold">Manage Movies</h2>
+                    </div>
+                    <button onclick="openMovieForm()" class="w-full sm:w-auto bg-red-600 px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-red-700 transition">
+                        <i data-lucide="plus" class="w-5 h-5"></i> Add New Movie
+                    </button>
+                </div>
+
+                <div class="glass rounded-3xl overflow-x-auto">
+                    <table class="w-full text-left min-w-[600px]">
+                        <thead class="bg-white/5">
+                            <tr>
+                                <th class="p-4">Movie</th>
+                                <th class="p-4">Category</th>
+                                <th class="p-4">Language</th>
+                                <th class="p-4">Trending</th>
+                                <th class="p-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="movies-table-body">
+                            <!-- Table rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Reels Section -->
+            <section id="section-reels" class="section hidden">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                    <div class="flex items-center gap-4">
+                        <button onclick="showSection('dashboard')" class="p-2 glass rounded-lg"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+                        <h2 class="text-2xl md:text-3xl font-bold">Manage Reels</h2>
+                    </div>
+                    <button onclick="openReelForm()" class="w-full sm:w-auto bg-red-600 px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-red-700 transition">
+                        <i data-lucide="plus" class="w-5 h-5"></i> Add New Reel
+                    </button>
+                </div>
+
+                <div class="glass rounded-3xl overflow-x-auto">
+                    <table class="w-full text-left min-w-[600px]">
+                        <thead class="bg-white/5">
+                            <tr>
+                                <th class="p-4">Reel Title</th>
+                                <th class="p-4">Description</th>
+                                <th class="p-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reels-table-body">
+                            <!-- Table rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Categories Section -->
+            <section id="section-categories" class="section hidden">
+                <div class="flex items-center gap-4 mb-8">
+                    <button onclick="showSection('dashboard')" class="p-2 glass rounded-lg"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+                    <h2 class="text-2xl md:text-3xl font-bold">Categories</h2>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="glass p-6 md:p-8 rounded-3xl">
+                        <h3 class="text-xl font-bold mb-6">Add New Category</h3>
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <input type="text" id="new-category-name" placeholder="Category Name">
+                            <button onclick="addCategory()" class="bg-red-600 px-8 py-3 rounded-2xl font-bold">Add</button>
+                        </div>
+                    </div>
+                    <div class="glass p-6 md:p-8 rounded-3xl">
+                        <h3 class="text-xl font-bold mb-6">Existing Categories</h3>
+                        <div id="categories-list" class="flex flex-wrap gap-3">
+                            <!-- Category tags -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Notifications Section -->
+            <section id="section-notifications" class="section hidden">
+                <div class="flex items-center gap-4 mb-8">
+                    <button onclick="showSection('dashboard')" class="p-2 glass rounded-lg"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+                    <h2 class="text-2xl md:text-3xl font-bold">Announcements</h2>
+                </div>
+                <div class="glass p-6 md:p-8 rounded-3xl max-w-2xl">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">Title</label>
+                            <input type="text" id="notif-title" placeholder="New Movie Release!">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">Message</label>
+                            <textarea id="notif-message" rows="4" placeholder="Check out the latest action thriller..."></textarea>
+                        </div>
+                        <button onclick="sendNotification()" class="w-full bg-red-600 py-4 rounded-2xl font-bold hover:bg-red-700 transition">Send to All Users</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Mobile Bottom Nav -->
+        <div class="md:hidden fixed bottom-0 left-0 right-0 glass border-t border-white/10 px-4 py-3 flex justify-around items-center z-50">
+            <button onclick="showSection('dashboard')" class="flex flex-col items-center gap-1 text-red-600" id="m-nav-dashboard">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold uppercase">Home</span>
+            </button>
+            <button onclick="showSection('movies')" class="flex flex-col items-center gap-1 text-gray-400" id="m-nav-movies">
+                <i data-lucide="film" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold uppercase">Movies</span>
+            </button>
+            <button onclick="showSection('reels')" class="flex flex-col items-center gap-1 text-gray-400" id="m-nav-reels">
+                <i data-lucide="clapperboard" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold uppercase">Reels</span>
+            </button>
+            <button onclick="showSection('categories')" class="flex flex-col items-center gap-1 text-gray-400" id="m-nav-categories">
+                <i data-lucide="list" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold uppercase">Cats</span>
+            </button>
+        </div>
+    </main>
+
+    <!-- Movie Form Modal -->
+    <div id="movie-modal" class="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="glass p-8 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-8">
+                <div class="flex items-center gap-3">
+                    <button onclick="closeMovieForm()" class="p-2 glass rounded-lg md:hidden"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+                    <h2 id="modal-title" class="text-2xl font-bold">Add New Movie</h2>
+                </div>
+                <button onclick="closeMovieForm()" class="p-2 hover:bg-white/10 rounded-full hidden md:block"><i data-lucide="x"></i></button>
+            </div>
+            
+            <form id="movie-form" onsubmit="saveMovie(event)" class="space-y-6">
+                <input type="hidden" id="edit-id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">Movie Title</label>
+                        <input type="text" id="movie-title" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">Category</label>
+                        <select id="movie-category" required>
+                            <!-- Categories will be injected -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">Language</label>
+                        <input type="text" id="movie-language" placeholder="English, Hindi, etc." required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">Trending</label>
+                        <select id="movie-trending">
+                            <option value="false">No</option>
+                            <option value="true">Yes</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">Description</label>
+                    <textarea id="movie-description" rows="3" required></textarea>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">Video Stream URL</label>
+                        <input type="url" id="movie-video-url" placeholder="https://example.com/video.mp4" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">Subtitle URL (Optional)</label>
+                        <input type="url" id="movie-subtitle-url" placeholder="https://example.com/sub.vtt">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">Thumbnail (Image)</label>
+                    <div class="flex items-center gap-4">
+                        <input type="file" id="movie-thumbnail" accept="image/*" class="flex-1">
+                        <div id="thumbnail-preview" class="w-16 h-24 bg-white/5 rounded-lg overflow-hidden border border-white/10 flex items-center justify-center">
+                            <i data-lucide="image" class="text-gray-600"></i>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-red-600 py-4 rounded-2xl font-bold hover:bg-red-700 transition">Save Movie</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reel Form Modal -->
+    <div id="reel-modal" class="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="glass p-8 rounded-3xl w-full max-w-xl">
+            <div class="flex justify-between items-center mb-8">
+                <div class="flex items-center gap-3">
+                    <button onclick="closeReelForm()" class="p-2 glass rounded-lg md:hidden"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+                    <h2 id="reel-modal-title" class="text-2xl font-bold">Add New Reel</h2>
+                </div>
+                <button onclick="closeReelForm()" class="p-2 hover:bg-white/10 rounded-full hidden md:block"><i data-lucide="x"></i></button>
+            </div>
+            
+            <form id="reel-form" onsubmit="saveReel(event)" class="space-y-6">
+                <input type="hidden" id="reel-edit-id">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">Reel Title</label>
+                    <input type="text" id="reel-title" required>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">Video URL</label>
+                    <input type="url" id="reel-video-url" placeholder="https://example.com/reel.mp4" required>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">Description</label>
+                    <textarea id="reel-description" rows="3"></textarea>
+                </div>
+                <button type="submit" class="w-full bg-red-600 py-4 rounded-2xl font-bold hover:bg-red-700 transition">Save Reel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-8 right-8 z-[120] glass px-6 py-3 rounded-2xl text-sm font-bold opacity-0 transition-opacity pointer-events-none">
+        Message here
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+        // Firebase Initialization
+        let db;
+        let movies = [];
+        let reels = [];
+        let categories = [];
+        let thumbnailBase64 = '';
+
+        async function initFirebase() {
+            try {
+                console.log("Fetching Firebase config...");
+                const response = await fetch('/firebase-applet-config.json');
+                if (!response.ok) throw new Error("Failed to fetch config");
+                const config = await response.json();
+                
+                console.log("Initializing Firebase...");
+                const app = initializeApp(config);
+                db = getFirestore(app, config.firestoreDatabaseId);
+                
+                console.log("Firebase initialized with database:", config.firestoreDatabaseId);
+                
+                // Start listeners after initialization
+                startListeners();
+            } catch (err) {
+                console.error("Firebase initialization failed:", err);
+                showToast("Database connection failed!");
+                // Hide loader so user can see the error or login screen
+                const loader = document.getElementById('admin-loading');
+                if (loader) {
+                    loader.classList.add('opacity-0');
+                    setTimeout(() => loader.classList.add('hidden'), 500);
+                }
+            }
+        }
+
+        // Initialize Lucide
+        lucide.createIcons();
+
+        // Auth Logic
+        function login() {
+            const pass = document.getElementById('admin-pass').value;
+            if (pass === 'admin123') {
+                document.getElementById('login-overlay').classList.add('hidden');
+                showToast("Welcome back, Admin!");
+            } else {
+                showToast("Invalid Password!");
+            }
+        }
+        window.login = login;
+
+        function logout() {
+            document.getElementById('login-overlay').classList.remove('hidden');
+            document.getElementById('admin-pass').value = '';
+        }
+        window.logout = logout;
+
+        // Section Management
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+            document.getElementById(`section-${sectionId}`).classList.remove('hidden');
+            
+            // Update Sidebar
+            document.querySelectorAll('.nav-btn').forEach(b => {
+                b.classList.remove('sidebar-active', 'text-white');
+                b.classList.add('text-gray-400');
+            });
+            const activeBtn = document.getElementById(`btn-${sectionId}`);
+            if (activeBtn) {
+                activeBtn.classList.add('sidebar-active', 'text-white');
+                activeBtn.classList.remove('text-gray-400');
+            }
+
+            // Update Mobile Nav
+            document.querySelectorAll('[id^="m-nav-"]').forEach(b => {
+                b.classList.remove('text-red-600');
+                b.classList.add('text-gray-400');
+            });
+            const activeMNav = document.getElementById(`m-nav-${sectionId}`);
+            if (activeMNav) {
+                activeMNav.classList.add('text-red-600');
+                activeMNav.classList.remove('text-gray-400');
+            }
+            window.scrollTo(0, 0);
+        }
+        window.showSection = showSection;
+
+        function toggleSidebar(force) {
+            const sidebar = document.getElementById('sidebar');
+            if (force !== undefined) {
+                if (force) sidebar.classList.remove('-translate-x-full');
+                else sidebar.classList.add('-translate-x-full');
+            } else {
+                sidebar.classList.toggle('-translate-x-full');
+            }
+        }
+        window.toggleSidebar = toggleSidebar;
+
+        function startListeners() {
+            console.log("Starting Firestore listeners...");
+            // Data Fetching
+            onSnapshot(collection(db, 'movies'), (snapshot) => {
+                console.log("Movies snapshot received:", snapshot.size);
+                movies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                updateStats();
+                renderMoviesTable();
+                renderRecentMovies();
+                const syncStatus = document.getElementById('sync-status');
+                if (syncStatus) syncStatus.classList.remove('hidden');
+                hideLoader();
+            }, (err) => {
+                console.error("Movies listener failed:", err);
+                hideLoader();
+            });
+
+            onSnapshot(collection(db, 'reels'), (snapshot) => {
+                reels = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                updateStats();
+                renderReelsTable();
+            }, (err) => console.error("Reels listener failed:", err));
+
+            onSnapshot(collection(db, 'categories'), (snapshot) => {
+                categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (categories.length === 0) {
+                    seedDefaultCategories();
+                }
+                renderCategories();
+                updateCategoryDropdown();
+            }, (err) => console.error("Categories listener failed:", err));
+        }
+
+        function hideLoader() {
+            const loader = document.getElementById('admin-loading');
+            if (loader && !loader.classList.contains('hidden')) {
+                loader.classList.add('opacity-0');
+                setTimeout(() => loader.classList.add('hidden'), 500);
+            }
+        }
+
+        // Fallback to hide loader after 5 seconds
+        setTimeout(hideLoader, 5000);
+
+        async function seedDefaultCategories() {
+            const defaults = ['Action', 'Comedy', 'Drama', 'Horror', 'Sci-Fi', 'Romance', 'Thriller', 'Documentary', 'Anime'];
+            for (const cat of defaults) {
+                await addDoc(collection(db, 'categories'), { name: cat });
+            }
+        }
+
+        // Dashboard Stats
+        function updateStats() {
+            document.getElementById('stat-movies').innerText = movies.length;
+            document.getElementById('stat-reels').innerText = reels.length;
+        }
+
+        // Movie Management
+        function renderMoviesTable() {
+            const tbody = document.getElementById('movies-table-body');
+            tbody.innerHTML = movies.map(m => `
+                <tr class="border-b border-white/5 hover:bg-white/5 transition">
+                    <td class="p-4 flex items-center gap-3">
+                        <img src="${m.thumbnailBase64 || 'https://picsum.photos/seed/'+m.id+'/40/60'}" class="w-10 h-14 object-cover rounded-lg" referrerPolicy="no-referrer">
+                        <span class="font-bold">${m.title}</span>
+                    </td>
+                    <td class="p-4 text-gray-400">${m.category}</td>
+                    <td class="p-4 text-gray-400">${m.language}</td>
+                    <td class="p-4">
+                        <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${m.trending ? 'bg-green-500/20 text-green-500' : 'bg-gray-500/20 text-gray-500'}">
+                            ${m.trending ? 'Trending' : 'Normal'}
+                        </span>
+                    </td>
+                    <td class="p-4">
+                        <div class="flex gap-2">
+                            <button onclick="editMovie('${m.id}')" class="p-2 hover:bg-blue-500/20 text-blue-500 rounded-lg transition"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                            <button onclick="deleteMovie('${m.id}')" class="p-2 hover:bg-red-500/20 text-red-500 rounded-lg transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function renderRecentMovies() {
+            const grid = document.getElementById('recent-movies');
+            const recent = movies.slice(-4).reverse();
+            grid.innerHTML = recent.map(m => `
+                <div class="glass p-4 rounded-2xl">
+                    <img src="${m.thumbnailBase64 || 'https://picsum.photos/seed/'+m.id+'/200/300'}" class="w-full aspect-[2/3] object-cover rounded-xl mb-3" referrerPolicy="no-referrer">
+                    <h4 class="font-bold line-clamp-1">${m.title}</h4>
+                    <p class="text-xs text-gray-400">${m.category}</p>
+                </div>
+            `).join('');
+        }
+
+        // Category Management
+        function renderCategories() {
+            const list = document.getElementById('categories-list');
+            list.innerHTML = categories.map(c => `
+                <div class="glass px-4 py-2 rounded-xl flex items-center gap-3">
+                    <span>${c.name}</span>
+                    <button onclick="deleteCategory('${c.id}')" class="text-red-500 hover:text-red-600"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function updateCategoryDropdown() {
+            const select = document.getElementById('movie-category');
+            select.innerHTML = `
+                <option value="">Select Category</option>
+                ${categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('')}
+            `;
+        }
+
+        window.addCategory = async () => {
+            const input = document.getElementById('new-category-name');
+            if (!input.value) return;
+            await addDoc(collection(db, 'categories'), { name: input.value });
+            input.value = '';
+            showToast("Category Added!");
+        };
+
+        window.deleteCategory = async (id) => {
+            if (confirm("Delete this category?")) {
+                await deleteDoc(doc(db, 'categories', id));
+                showToast("Category Deleted!");
+            }
+        };
+
+        // Movie Form Logic
+        window.openMovieForm = () => {
+            document.getElementById('modal-title').innerText = "Add New Movie";
+            document.getElementById('movie-form').reset();
+            document.getElementById('edit-id').value = '';
+            document.getElementById('thumbnail-preview').innerHTML = '<i data-lucide="image" class="text-gray-600"></i>';
+            thumbnailBase64 = '';
+            document.getElementById('movie-modal').classList.remove('hidden');
+            lucide.createIcons();
+        };
+
+        window.closeMovieForm = () => {
+            document.getElementById('movie-modal').classList.add('hidden');
+        };
+
+        document.getElementById('movie-thumbnail').onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                thumbnailBase64 = event.target.result;
+                document.getElementById('thumbnail-preview').innerHTML = `<img src="${thumbnailBase64}" class="w-full h-full object-cover">`;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.saveMovie = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value;
+            const movieData = {
+                title: document.getElementById('movie-title').value,
+                category: document.getElementById('movie-category').value,
+                language: document.getElementById('movie-language').value,
+                description: document.getElementById('movie-description').value,
+                videoUrl: document.getElementById('movie-video-url').value,
+                subtitleUrl: document.getElementById('movie-subtitle-url').value,
+                trending: document.getElementById('movie-trending').value === 'true',
+                thumbnailBase64: thumbnailBase64 || null,
+                updatedAt: serverTimestamp()
+            };
+
+            try {
+                if (id) {
+                    await updateDoc(doc(db, 'movies', id), movieData);
+                    showToast("Movie Updated!");
+                } else {
+                    movieData.createdAt = serverTimestamp();
+                    await addDoc(collection(db, 'movies'), movieData);
+                    showToast("Movie Added!");
+                }
+                closeMovieForm();
+            } catch (err) {
+                console.error(err);
+                showToast("Error saving movie!");
+            }
+        };
+
+        window.editMovie = (id) => {
+            const m = movies.find(movie => movie.id === id);
+            if (!m) return;
+
+            document.getElementById('modal-title').innerText = "Edit Movie";
+            document.getElementById('edit-id').value = m.id;
+            document.getElementById('movie-title').value = m.title;
+            document.getElementById('movie-category').value = m.category;
+            document.getElementById('movie-language').value = m.language;
+            document.getElementById('movie-description').value = m.description;
+            document.getElementById('movie-video-url').value = m.videoUrl;
+            document.getElementById('movie-subtitle-url').value = m.subtitleUrl || '';
+            document.getElementById('movie-trending').value = m.trending.toString();
+            
+            if (m.thumbnailBase64) {
+                thumbnailBase64 = m.thumbnailBase64;
+                document.getElementById('thumbnail-preview').innerHTML = `<img src="${thumbnailBase64}" class="w-full h-full object-cover">`;
+            }
+            
+            document.getElementById('movie-modal').classList.remove('hidden');
+        };
+
+        window.deleteMovie = async (id) => {
+            if (confirm("Are you sure you want to delete this movie?")) {
+                await deleteDoc(doc(db, 'movies', id));
+                showToast("Movie Deleted!");
+            }
+        };
+
+        // Reels Management
+        function renderReelsTable() {
+            const tbody = document.getElementById('reels-table-body');
+            tbody.innerHTML = reels.map(r => `
+                <tr class="border-b border-white/5 hover:bg-white/5 transition">
+                    <td class="p-4 font-bold">${r.title}</td>
+                    <td class="p-4 text-gray-400 line-clamp-1">${r.description || 'No description'}</td>
+                    <td class="p-4">
+                        <div class="flex gap-2">
+                            <button onclick="editReel('${r.id}')" class="p-2 hover:bg-blue-500/20 text-blue-500 rounded-lg transition"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                            <button onclick="deleteReel('${r.id}')" class="p-2 hover:bg-red-500/20 text-red-500 rounded-lg transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        window.openReelForm = () => {
+            document.getElementById('reel-modal-title').innerText = "Add New Reel";
+            document.getElementById('reel-form').reset();
+            document.getElementById('reel-edit-id').value = '';
+            document.getElementById('reel-modal').classList.remove('hidden');
+        };
+
+        window.closeReelForm = () => {
+            document.getElementById('reel-modal').classList.add('hidden');
+        };
+
+        window.saveReel = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('reel-edit-id').value;
+            const reelData = {
+                title: document.getElementById('reel-title').value,
+                videoUrl: document.getElementById('reel-video-url').value,
+                description: document.getElementById('reel-description').value,
+                updatedAt: serverTimestamp()
+            };
+
+            try {
+                if (id) {
+                    await updateDoc(doc(db, 'reels', id), reelData);
+                    showToast("Reel Updated!");
+                } else {
+                    reelData.createdAt = serverTimestamp();
+                    await addDoc(collection(db, 'reels'), reelData);
+                    showToast("Reel Added!");
+                }
+                closeReelForm();
+            } catch (err) {
+                console.error(err);
+                showToast("Error saving reel!");
+            }
+        };
+
+        window.editReel = (id) => {
+            const r = reels.find(reel => reel.id === id);
+            if (!r) return;
+
+            document.getElementById('reel-modal-title').innerText = "Edit Reel";
+            document.getElementById('reel-edit-id').value = r.id;
+            document.getElementById('reel-title').value = r.title;
+            document.getElementById('reel-video-url').value = r.videoUrl;
+            document.getElementById('reel-description').value = r.description || '';
+            
+            document.getElementById('reel-modal').classList.remove('hidden');
+        };
+
+        window.deleteReel = async (id) => {
+            if (confirm("Delete this reel?")) {
+                await deleteDoc(doc(db, 'reels', id));
+                showToast("Reel Deleted!");
+            }
+        };
+
+        // Notifications
+        window.sendNotification = async () => {
+            const title = document.getElementById('notif-title').value;
+            const message = document.getElementById('notif-message').value;
+            
+            if (!title || !message) return showToast("Fill all fields!");
+            
+            await addDoc(collection(db, 'notifications'), {
+                title,
+                message,
+                timestamp: serverTimestamp()
+            });
+            
+            document.getElementById('notif-title').value = '';
+            document.getElementById('notif-message').value = '';
+            showToast("Announcement Sent!");
+        };
+
+        // Utilities
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            if (!toast) return;
+            toast.innerText = msg;
+            toast.style.opacity = '1';
+            toast.classList.remove('pointer-events-none');
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.classList.add('pointer-events-none');
+            }, 3000);
+        }
+        window.showToast = showToast;
+
+        // Start initialization
+        initFirebase();
+    </script>
+</body>
+</html>
